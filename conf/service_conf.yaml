@@ -1,0 +1,43 @@
+ragflow:
+  host: 0.0.0.0
+  http_port: 9380
+
+#  数据库
+mysql:
+  host: 'localhost'
+  port: 3306
+  user: 'root'
+  password: '123456'
+  name: 'rag_flow'
+  max_connections: 100
+  stale_timeout: 30
+minio:
+  host: 'localhost:9000'
+  user: 'rag_flow'
+  password: 'infini_rag_flow'
+es:
+  hosts: 'http://localhost:9200'
+redis:
+  host: 'localhost:6379'
+  password: 'infini_rag_flow'
+  db: 1
+
+oauth:
+  github:
+    client_id: xxxxxxxxxxxxxxxxxxxxxxxxx
+    secret_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    url: https://github.com/login/oauth/access_token
+  feishu:
+    app_id: cli_xxxxxxxxxxxxxxxxxxx
+    app_secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    app_access_token_url: https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal
+    user_access_token_url: https://open.feishu.cn/open-apis/authen/v1/oidc/access_token
+    grant_type: 'authorization_code'
+authentication:
+  client:
+    switch: false
+    http_app_key:
+    http_secret_key:
+  site:
+    switch: false
+
