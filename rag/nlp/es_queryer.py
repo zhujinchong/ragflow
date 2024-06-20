@@ -36,7 +36,7 @@ class EsQueryer:
     def subSpecialChar(line):
         return re.sub(r"([:\{\}/\[\]\-\*\"\(\)\|~\^])", r"\\\1", line).strip()
 
-    def _isChinese(line):
+    def _isChinese(self, line):
         arr = re.split(r"[ \t]+", line)
         if len(arr) <= 3:
             return True
@@ -62,20 +62,20 @@ class EsQueryer:
         return txt
 
     def question(self, txt, min_match="60%"):
-        txt = re.sub(
-            r"[ :\r\n\t,，。？?/`!！&\^%%]+",
-            " ",
-            rag_tokenizer.tradi2simp(rag_tokenizer.strQ2B(txt.lower()))).strip()
+        txt = rag_tokenizer.tradi2simp(rag_tokenizer.strQ2B(txt.lower()))
+        txt = re.sub(r"[ :\r\n\t,，。？?/`!！&\^%%]+", " ", txt).strip()
         txt = EsQueryer.rmWWW(txt)
-
+        print("question: " + txt)
         if not self._isChinese(txt):
             tks = rag_tokenizer.tokenize(txt).split(" ")
             tks_w = self.term_weight_dealer.weights(tks)
+            print(f"tks_w: {tks_w}")
             tks_w = [(re.sub(r"[ \\\"']+", "", tk), w) for tk, w in tks_w]  # 过滤空格、反斜杠、单引号、双引号
             q = ["{}^{:.4f}".format(tk, w) for tk, w in tks_w if tk]
             # 相邻token组合
             for i in range(1, len(tks_w)):
                 q.append("\"%s %s\"^%.4f" % (tks_w[i - 1][0], tks_w[i][0], max(tks_w[i - 1][1], tks_w[i][1]) * 2))
+            # 如果q是空，直接查字符串
             if not q:
                 q.append(txt)
             return Q("bool",

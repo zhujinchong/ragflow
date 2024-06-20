@@ -36,10 +36,10 @@ class Dealer:
 # if __name__ == '__main__':
 #     dl = Dealer()
 #     from rag_tokenizer import tokenize
-#     s = '1002902是那个公司的股票？'
+#     s = '  your name tom cat if not wh your real name'
 #     print(dl.weights([s]))
-#     token_list = tokenize(s)
-#     print(token_list)
-#     print(dl.weights([token_list]))
-#     print(dl.weights(token_list.split(" ")))
+    # token_list = tokenize(s)
+    # print(token_list)
+    # print(dl.weights([token_list]))
+    # print(dl.weights(token_list.split(" ")))
 #

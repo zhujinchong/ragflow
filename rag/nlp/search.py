@@ -49,9 +49,16 @@ class Dealer:
             "query_vector": [float(v) for v in qv]
         }
 
+    """
+    1、关键字检索
+    """
     def search_chunk_list(self, req, idxnm, emb_mdl=None):
         qst = req.get("question", "")
         bqry, keywords = self.qryr.question(qst)
+        print("=======================================qryr.question(qst)")
+        print(bqry)
+        print(keywords)
+        print("=======================================end")
         def add_filters(bqry):
             nonlocal req
             if req.get("kb_ids"):
@@ -331,6 +338,9 @@ class Dealer:
 
         return tkweight*np.array(tksim) + vtweight*vtsim, tksim, vtsim
 
+    """
+    retrieval_test: 
+    """
     def retrieval(self, question, embd_mdl, tenant_id, kb_ids, page, page_size, similarity_threshold=0.2,
                   vector_similarity_weight=0.3, top=1024, doc_ids=None, aggs=True, rerank_mdl=None):
         ranks = {"total": 0, "chunks": [], "doc_aggs": {}}
@@ -340,6 +350,7 @@ class Dealer:
                "question": question, "vector": True, "topk": top,
                "similarity": similarity_threshold,
                "available_int": 1}
+
         sres = self.search_chunk_list(req, index_name(tenant_id), embd_mdl)
 
         if rerank_mdl:
