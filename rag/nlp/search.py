@@ -1,4 +1,3 @@
-
 import json
 import re
 from copy import deepcopy
@@ -50,15 +49,13 @@ class Dealer:
         }
 
     """
-    1、关键字检索
+    关键字检索 + knn向量相似度过滤
     """
+
     def search_chunk_list(self, req, idxnm, emb_mdl=None):
         qst = req.get("question", "")
         bqry, keywords = self.qryr.question(qst)
-        print("=======================================qryr.question(qst)")
-        print(bqry)
-        print(keywords)
-        print("=======================================end")
+
         def add_filters(bqry):
             nonlocal req
             if req.get("kb_ids"):
@@ -117,9 +114,7 @@ class Dealer:
         q_vec = []
         if req.get("vector"):
             assert emb_mdl, "No embedding model selected"
-            s["knn"] = self._vector(
-                qst, emb_mdl, req.get(
-                    "similarity", 0.1), topk)
+            s["knn"] = self._vector(qst, emb_mdl, req.get("similarity", 0.1), topk)
             s["knn"]["filter"] = bqry.to_dict()
             if "highlight" in s:
                 del s["highlight"]
@@ -208,10 +203,22 @@ class Dealer:
 
     @staticmethod
     def _trans2floats(txt):
+        """"es检索结果转向量"""
         return [float(t) for t in txt.split("\t")]
 
-    def insert_citations(self, answer, chunks, chunk_v,
-                         embd_mdl, tkweight=0.1, vtweight=0.9):
+    """
+    用途：
+        chat方法可以设置citation
+    方法：
+        
+    """
+    def insert_citations(self, answer, chunks, chunk_v, embd_mdl, tkweight=0.1, vtweight=0.9):
+        '''
+        answer：回答
+        chunks: 检索到chunk的ltks
+        chunk_v: 检索到chunk的vector
+        embd_mdl：嵌入模型
+        '''
         assert len(chunks) == len(chunk_v)
         pieces = re.split(r"(```)", answer)
         if len(pieces) >= 3:
@@ -258,7 +265,7 @@ class Dealer:
                       for ck in chunks]
         cites = {}
         thr = 0.63
-        while thr>0.3 and len(cites.keys()) == 0 and pieces_ and chunks_tks:
+        while thr > 0.3 and len(cites.keys()) == 0 and pieces_ and chunks_tks:
             for i, a in enumerate(pieces_):
                 sim, tksim, vtsim = self.qryr.hybrid_similarity(ans_v[i],
                                                                 chunk_v,
@@ -292,34 +299,35 @@ class Dealer:
 
         return res, seted
 
-    def _rerank(self, sres, query, tkweight=0.3,
-               vtweight=0.7, cfield="content_ltks"):
+    def _rerank(self, sres, query, tkweight=0.3, vtweight=0.7, cfield="content_ltks"):
+        """
+        计算：混合相似度，文本相似度，向量相似度
+        """
         _, keywords = self.qryr.question(query)
-        ins_embd = [
+        sres_vectors = [
             Dealer._trans2floats(
-                sres.field[i].get("q_%d_vec" % len(sres.query_vector), "\t".join(["0"] * len(sres.query_vector)))) for i in sres.ids]
-        if not ins_embd:
+                sres.field[i].get("q_%d_vec" % len(sres.query_vector), "\t".join(["0"] * len(sres.query_vector)))) for i
+            in sres.ids]
+        if not sres_vectors:
             return [], [], []
-
         for i in sres.ids:
             if isinstance(sres.field[i].get("important_kwd", []), str):
                 sres.field[i]["important_kwd"] = [sres.field[i]["important_kwd"]]
-        ins_tw = []
+        sres_keywords = []
         for i in sres.ids:
             content_ltks = sres.field[i][cfield].split(" ")
             title_tks = [t for t in sres.field[i].get("title_tks", "").split(" ") if t]
             important_kwd = sres.field[i].get("important_kwd", [])
             tks = content_ltks + title_tks + important_kwd
-            ins_tw.append(tks)
+            sres_keywords.append(tks)
 
-        sim, tksim, vtsim = self.qryr.hybrid_similarity(sres.query_vector,
-                                                        ins_embd,
-                                                        keywords,
-                                                        ins_tw, tkweight, vtweight)
+        # 混合相似度，文本相似度，向量相似度
+        sim, tksim, vtsim = self.qryr.hybrid_similarity(sres.query_vector, sres_vectors, keywords, sres_keywords,
+                                                        tkweight, vtweight)
         return sim, tksim, vtsim
 
     def _rerank_by_model(self, rerank_mdl, sres, query, tkweight=0.3,
-               vtweight=0.7, cfield="content_ltks"):
+                         vtweight=0.7, cfield="content_ltks"):
         _, keywords = self.qryr.question(query)
 
         for i in sres.ids:
@@ -334,13 +342,19 @@ class Dealer:
             ins_tw.append(tks)
 
         tksim = self.qryr.token_similarity(keywords, ins_tw)
-        vtsim,_ = rerank_mdl.similarity(" ".join(keywords), [rmSpace(" ".join(tks)) for tks in ins_tw])
+        vtsim, _ = rerank_mdl.similarity(" ".join(keywords), [rmSpace(" ".join(tks)) for tks in ins_tw])
 
-        return tkweight*np.array(tksim) + vtweight*vtsim, tksim, vtsim
+        return tkweight * np.array(tksim) + vtweight * vtsim, tksim, vtsim
 
     """
-    retrieval_test: 
+    用途：
+        retrieval_test: 召回测试
+        chat: 对话
+    方法：
+        1、调用search_chunk_list
+        2、重排
     """
+
     def retrieval(self, question, embd_mdl, tenant_id, kb_ids, page, page_size, similarity_threshold=0.2,
                   vector_similarity_weight=0.3, top=1024, doc_ids=None, aggs=True, rerank_mdl=None):
         ranks = {"total": 0, "chunks": [], "doc_aggs": {}}
@@ -352,13 +366,13 @@ class Dealer:
                "available_int": 1}
 
         sres = self.search_chunk_list(req, index_name(tenant_id), embd_mdl)
-
+        # sim混合相似度，tsim文本相似度，vsim向量相似度
         if rerank_mdl:
             sim, tsim, vsim = self._rerank_by_model(rerank_mdl,
-                sres, question, 1 - vector_similarity_weight, vector_similarity_weight)
+                                                    sres, question, 1 - vector_similarity_weight,
+                                                    vector_similarity_weight)
         else:
-            sim, tsim, vsim = self._rerank(
-                sres, question, 1 - vector_similarity_weight, vector_similarity_weight)
+            sim, tsim, vsim = self._rerank(sres, question, 1 - vector_similarity_weight, vector_similarity_weight)
         idx = np.argsort(sim * -1)
 
         dim = len(sres.query_vector)
@@ -406,8 +420,7 @@ class Dealer:
                               "doc_id": v["doc_id"],
                               "count": v["count"]} for k,
                              v in sorted(ranks["doc_aggs"].items(),
-                                         key=lambda x:x[1]["count"] * -1)]
-
+                                         key=lambda x: x[1]["count"] * -1)]
         return ranks
 
     def sql_retrieval(self, sql, fetch_size=128, format="json"):
@@ -425,7 +438,7 @@ class Dealer:
                     r.group(1),
                     r.group(2),
                     r.group(3)),
-                    match))
+                 match))
 
         for p, r in replaces:
             sql = sql.replace(p, r, 1)
@@ -437,6 +450,14 @@ class Dealer:
         except Exception as e:
             chat_logger.error(f"SQL failure: {sql} =>" + str(e))
             return {"error": str(e)}
+
+    """
+    用途：
+        list_chunks：查询chunk列表
+        run_raptor：构建层级树
+    方法：(简单)
+        直接查询es并返回chunk
+    """
 
     def chunk_list(self, doc_id, tenant_id, max_count=1024, fields=["docnm_kwd", "content_with_weight", "img_id"]):
         s = Search()

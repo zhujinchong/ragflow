@@ -11,7 +11,7 @@ from elasticsearch_dsl import Q
 from sklearn.metrics.pairwise import cosine_similarity as CosineSimilarity
 
 from rag.nlp import rag_tokenizer, term_weight, synonym
-
+from rag.nlp.sub_special_char import rm_stop_words
 """
 1、组装es查询语句
 2、计算query和chunk相似度
@@ -63,23 +63,20 @@ class EsQueryer:
 
     def question(self, txt, min_match="60%"):
         txt = rag_tokenizer.tradi2simp(rag_tokenizer.strQ2B(txt.lower()))
-        txt = re.sub(r"[ :\r\n\t,，。？?/`!！&\^%%]+", " ", txt).strip()
-        txt = EsQueryer.rmWWW(txt)
-        print("question: " + txt)
+        txt = rm_stop_words(txt)
+        print("question(rm_stop_words): " + txt)
         if not self._isChinese(txt):
             tks = rag_tokenizer.tokenize(txt).split(" ")
             tks_w = self.term_weight_dealer.weights(tks)
-            print(f"tks_w: {tks_w}")
-            tks_w = [(re.sub(r"[ \\\"']+", "", tk), w) for tk, w in tks_w]  # 过滤空格、反斜杠、单引号、双引号
             q = ["{}^{:.4f}".format(tk, w) for tk, w in tks_w if tk]
             # 相邻token组合
             for i in range(1, len(tks_w)):
                 q.append("\"%s %s\"^%.4f" % (tks_w[i - 1][0], tks_w[i][0], max(tks_w[i - 1][1], tks_w[i][1]) * 2))
-            # 如果q是空，直接查字符串
+            # 如果q是空，直接检索输入字符串
             if not q:
                 q.append(txt)
             return Q("bool",
-                     must=Q("query_string", fields=self.flds,
+                     must=Q("query_string", fields=copy.deepcopy(self.flds),
                             type="best_fields", query=" ".join(q),
                             boost=1)
                      ), tks
@@ -92,7 +89,7 @@ class EsQueryer:
             return True
 
         qs, keywords = [], []
-        for tt in rag_tokenizer.tokenize(txt).split(" ")[:256]:  # .split(" "):
+        for tt in rag_tokenizer.tokenize(txt).split(" ")[:256]:
             if not tt:
                 continue
             twts = self.term_weight_dealer.weights([tt])
@@ -100,49 +97,38 @@ class EsQueryer:
             logging.info(json.dumps(twts, ensure_ascii=False))
             tms = []
             for tk, w in sorted(twts, key=lambda x: x[1] * -1):
+                keywords.append(tk)
+
                 sm = rag_tokenizer.fine_grained_tokenize(tk).split(" ") if need_fine_grained_tokenize(tk) else []
-                sm = [
-                    re.sub(
-                        r"[ ,\./;'\[\]\\`~!@#$%\^&\*\(\)=\+_<>\?:\"\{\}\|，。；‘’【】、！￥……（）——《》？：“”-]+",
-                        "",
-                        m) for m in sm]
-                sm = [EsQueryer.subSpecialChar(m) for m in sm if len(m) > 1]
                 sm = [m for m in sm if len(m) > 1]
                 if len(sm) < 2:
                     sm = []
-
-                keywords.append(re.sub(r"[ \\\"']+", "", tk))
-
                 tk_syns = self.synonym_dealer.lookup(tk)
-                tk = EsQueryer.subSpecialChar(tk)
                 if tk.find(" ") > 0:
-                    tk = "\"%s\"" % tk
+                    tk = f'\"{tk}\"'
                 if tk_syns:
-                    tk = f"({tk} %s)" % " ".join(tk_syns)
+                    tk = f'({tk} {" ".join(tk_syns)})'
                 if sm:
-                    tk = f"{tk} OR \"%s\" OR (\"%s\"~2)^0.5" % (
-                        " ".join(sm), " ".join(sm))
+                    tk = f'{tk} OR \"{" ".join(sm)}\" OR (\"{" ".join(sm)}\"~2)^0.5'
                 tms.append((tk, w))
-
             tms = " ".join([f"({t})^{w}" for t, w in tms])
-
             if len(twts) > 1:
-                tms += f" (\"%s\"~4)^1.5" % (" ".join([t for t, _ in twts]))
+                tms += f' (\"{" ".join([t for t, _ in twts])}\"~4)^1.5'
             if re.match(r"[0-9a-z ]+$", tt):
-                tms = f"(\"{tt}\" OR \"%s\")" % rag_tokenizer.tokenize(tt)
-
-            syns = " OR ".join(
-                ["\"%s\"^0.7" % EsQueryer.subSpecialChar(rag_tokenizer.tokenize(s)) for s in syns])
+                tms = f'(\"{tt}\" OR \"{rag_tokenizer.tokenize(tt)}\")'
+            if not tms:
+                tms = tt
+            tms = f"({tms})^5"
             if syns:
-                tms = f"({tms})^5 OR ({syns})^0.7"
-
+                syns = " OR ".join([f'\"{rag_tokenizer.tokenize(s)}\"^0.7' for s in syns])
+                tms += f" OR ({syns})^0.7"
             qs.append(tms)
 
-        flds = copy.deepcopy(self.flds)
         mst = []
+        # 如果q是空，直接检索输入字符串
         if qs:
             mst.append(
-                Q("query_string", fields=flds, type="best_fields",
+                Q("query_string", fields=copy.deepcopy(self.flds), type="best_fields",
                   query=" OR ".join([f"({t})" for t in qs if t]), boost=1, minimum_should_match=min_match)
             )
 
@@ -157,7 +143,7 @@ class EsQueryer:
         tksim = self.token_similarity(atks, btkss)
         return np.array(sims[0]) * vtweight + np.array(tksim) * tkweight, tksim, sims[0]
 
-    # 计算 query 和 [chunk] 之间的相似度分数
+    # 计算 atks 和 btkss 之间的相似度分数
     # atks: tokenize(回答的一句话); btkss: [tokenize(chunk)，]
     # atks: [keyword, ]; btkss: [content_ltks + title_tks + important_kwd, ]
     def token_similarity(self, atks, btkss):

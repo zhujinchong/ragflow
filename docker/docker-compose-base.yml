@@ -90,7 +90,7 @@ services:
     image: nginx:1.24.0
     container_name: ragflow-frontend
     environment:
-      - SERVER_HOST=http://192.168.1.11:9380
+      - SERVER_HOST=http://192.168.1.7:9380
       - TZ=Asia/Shanghai
     volumes:
       - ./init_data/dist:/ragflow/web/dist

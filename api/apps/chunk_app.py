@@ -57,7 +57,7 @@ def list_chunk():
         if "available_int" in req:
             query["available_int"] = int(req["available_int"])
         sres = retrievaler.search_chunk_list(query, search.index_name(tenant_id))
-        print(sres)
+        # print(sres)
         res = {"total": sres.total, "chunks": [], "doc": doc.to_dict()}
         for id in sres.ids:
             d = {

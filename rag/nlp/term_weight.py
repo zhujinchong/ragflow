@@ -33,13 +33,13 @@ class Dealer:
         return [(t, s / S) for t, s in tw]
 
 
-# if __name__ == '__main__':
-#     dl = Dealer()
-#     from rag_tokenizer import tokenize
-#     s = '  your name tom cat if not wh your real name'
-#     print(dl.weights([s]))
+if __name__ == '__main__':
+    dl = Dealer()
+    from rag_tokenizer import tokenize
+    s = '华为'
+    print(dl.weights([s]))
     # token_list = tokenize(s)
     # print(token_list)
     # print(dl.weights([token_list]))
     # print(dl.weights(token_list.split(" ")))
-#
+
