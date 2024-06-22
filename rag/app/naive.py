@@ -27,6 +27,7 @@ class Docx(DocxParser):
         pass
 
     def __clean(self, line):
+        # 替换中文全角空格
         line = re.sub(r"\u3000", " ", line).strip()
         return line
 
