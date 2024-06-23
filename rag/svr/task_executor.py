@@ -45,7 +45,7 @@ from rag.nlp import search, rag_tokenizer
 from io import BytesIO
 import pandas as pd
 
-from rag.app import laws, paper, presentation, manual, qa, table, book, picture, naive, one
+from rag.app import laws, paper, qa, picture, naive
 
 from api.db import LLMType, ParserType
 from api.db.services.document_service import DocumentService
@@ -59,15 +59,15 @@ FACTORY = {
     "general": naive,
     ParserType.NAIVE.value: naive,
     ParserType.PAPER.value: paper,
-    ParserType.BOOK.value: book,
-    ParserType.PRESENTATION.value: presentation,
-    ParserType.MANUAL.value: manual,
+    # ParserType.BOOK.value: book,
+    # ParserType.PRESENTATION.value: presentation,
+    # ParserType.MANUAL.value: manual,
     ParserType.LAWS.value: laws,
     ParserType.QA.value: qa,
-    ParserType.TABLE.value: table,
+    # ParserType.TABLE.value: table,
     # ParserType.RESUME.value: resume,
     ParserType.PICTURE.value: picture,
-    ParserType.ONE.value: one,
+    # ParserType.ONE.value: one,
 }
 
 
