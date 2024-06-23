@@ -17,8 +17,8 @@ from PIL import Image
 
 from api.db import LLMType
 from api.db.services.llm_service import LLMBundle
-from rag.nlp import tokenize
 from deepdoc.vision import OCR
+from rag.nlp import tokenize
 
 ocr = OCR()
 
@@ -26,6 +26,8 @@ ocr = OCR()
 def chunk(filename, binary, tenant_id, lang, callback=None, **kwargs):
     try:
         cv_mdl = LLMBundle(tenant_id, LLMType.IMAGE2TEXT, lang=lang)
+        # from rag.llm.cv_model import DefaultCV
+        # cv_mdl = DefaultCV()
     except Exception as e:
         callback(prog=-1, msg=str(e))
         return []
@@ -38,11 +40,12 @@ def chunk(filename, binary, tenant_id, lang, callback=None, **kwargs):
     txt = "\n".join([t[0] for _, t in bxs if t[0]])
     eng = lang.lower() == "english"
     callback(0.4, "Finish OCR: (%s ...)" % txt[:12])
+    # 如果图片内容>32，分词后返回即可
     if (eng and len(txt.split(" ")) > 32) or len(txt) > 32:
         tokenize(doc, txt, eng)
         callback(0.8, "OCR results is too long to use CV LLM.")
         return [doc]
-
+    # 否则，用cv模型识别
     try:
         callback(0.4, "Use CV LLM to describe the picture.")
         ans = cv_mdl.describe(binary)
@@ -54,3 +57,14 @@ def chunk(filename, binary, tenant_id, lang, callback=None, **kwargs):
         callback(prog=-1, msg=str(e))
 
     return []
+
+# if __name__ == "__main__":
+#     def dummy(prog=None, msg=""):
+#         pass
+#
+#     pdf = "技术培训.pdf"
+#     docx = "技术培训.docx"
+#     img = "454_4065_a3522f131d4c06d.jpg"
+#     with open(img, 'rb') as f:
+#         c = f.read()
+#     chunk(img, c, "", 'eng', callback=dummy)

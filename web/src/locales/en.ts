@@ -211,17 +211,15 @@ export default {
       <i>All the PPT files you uploaded will be chunked by using this method automatically, setting-up for every PPT file is not necessary.</i></p>`,
       qa: `
       <p>
-      This chunk method supports <b>EXCEL</b> and <b>CSV/TXT</b> file formats.
+      This chunk method supports <b>XLSX/CSV/TXT</b> file formats.
     </p>
     <li>
-      If the file is in <b>Excel</b> format, it should consist of two columns
+      If the file is in <b>XLSX</b> format, it should consist of two columns
       without headers: one for questions and the other for answers, with the
-      question column preceding the answer column. Multiple sheets are
-      acceptable as long as the columns are correctly structured.
+      question column preceding the answer column.
     </li>
     <li>
-      If the file is in <b>CSV/TXT</b> format, it must be UTF-8 encoded with TAB
-      used as the delimiter to separate questions and answers.
+      If the file is in <b>CSV/TXT</b> format, it must be UTF-8 encoded with TAB used as the delimiter to separate questions and answers.
     </li>
     <p>
       <i>

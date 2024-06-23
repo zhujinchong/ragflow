@@ -70,6 +70,7 @@ class DefaultChat(Base):
     def __init__(self):
         super().__init__(key="EMPTY", model_name="qwen:0.5b-chat", base_url="http://localhost:11434/v1")
 
+
 # if __name__ == '__main__':
 #     llm = DefaultChat()
 #     history = [

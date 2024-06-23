@@ -10,14 +10,15 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
-from tika import parser
-from io import BytesIO
-from docx import Document
-from timeit import default_timer as timer
 import re
-from deepdoc.parser.pdf_parser import PlainParser
-from rag.nlp import rag_tokenizer, naive_merge, tokenize_table, tokenize_chunks, find_codec
+from io import BytesIO
+from timeit import default_timer as timer
+
+from docx import Document
+from tika import parser
+
 from deepdoc.parser import PdfParser, ExcelParser, DocxParser, HtmlParser
+from rag.nlp import rag_tokenizer, naive_merge, tokenize_table, tokenize_chunks, find_codec
 from rag.settings import cron_logger
 from rag.utils import num_tokens_from_string
 
@@ -49,14 +50,14 @@ class Docx(DocxParser):
                     pn += 1
         tbls = []
         for tb in self.doc.tables:
-            html= "<table>"
+            html = "<table>"
             for r in tb.rows:
                 html += "<tr>"
                 i = 0
                 while i < len(r.cells):
                     span = 1
                     c = r.cells[i]
-                    for j in range(i+1, len(r.cells)):
+                    for j in range(i + 1, len(r.cells)):
                         if c.text == r.cells[j].text:
                             span += 1
                             i = j
@@ -91,9 +92,9 @@ class Pdf(PdfParser):
         self._text_merge()
         callback(0.67, "Text merging finished")
         tbls = self._extract_table_figure(True, zoomin, True, True)
-        #self._naive_vertical_merge()
+        # self._naive_vertical_merge()
         self._concat_downward()
-        #self._filter_forpages()
+        # self._filter_forpages()
 
         cron_logger.info("layouts: {}".format(timer() - start))
         return [(b["text"], self._line_tag(b, zoomin))
@@ -110,18 +111,19 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
     """
 
     eng = lang.lower() == "english"  # is_english(cks)
-    parser_config = kwargs.get(
-        "parser_config", {
-            "chunk_token_num": 128, "delimiter": "\n!?。；！？", "layout_recognize": True})
+    parser_config = kwargs.get("parser_config",
+                               {"chunk_token_num": 128, "delimiter": "\n!?。；！？", "layout_recognize": True})
+    no_extension_filename = re.sub(r"\.[a-zA-Z]+$", "", filename)
     doc = {
         "docnm_kwd": filename,
-        # r"\.[a-zA-Z]+$" 移除扩展名
-        "title_tks": rag_tokenizer.tokenize(re.sub(r"\.[a-zA-Z]+$", "", filename))
+        "title_tks": rag_tokenizer.tokenize(no_extension_filename),
+        "title_sm_tks": rag_tokenizer.fine_grained_tokenize(no_extension_filename)
+
     }
-    doc["title_sm_tks"] = rag_tokenizer.fine_grained_tokenize(doc["title_tks"])
     res = []
     pdf_parser = None
     sections = []
+
     if re.search(r"\.docx$", filename, re.IGNORECASE):
         callback(0.1, "Start to parse.")
         sections, tbls = Docx()(filename, binary)
@@ -129,10 +131,11 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
         callback(0.8, "Finish parsing.")
 
     elif re.search(r"\.pdf$", filename, re.IGNORECASE):
-        pdf_parser = Pdf(
-        ) if parser_config.get("layout_recognize", True) else PlainParser()
+        pdf_parser = Pdf()
         sections, tbls = pdf_parser(filename if not binary else binary,
-                                    from_page=from_page, to_page=to_page, callback=callback)
+                               from_page=from_page,
+                               to_page=to_page,
+                               callback=callback)
         res = tokenize_table(tbls, doc, eng)
 
     elif re.search(r"\.xlsx?$", filename, re.IGNORECASE):
@@ -156,8 +159,8 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
         sections = []
         for sec in txt.split("\n"):
             if num_tokens_from_string(sec) > 10 * parser_config.get("chunk_token_num", 128):
-                sections.append((sec[:int(len(sec)/2)], ""))
-                sections.append((sec[int(len(sec)/2):], ""))
+                sections.append((sec[:int(len(sec) / 2)], ""))
+                sections.append((sec[int(len(sec) / 2):], ""))
             else:
                 sections.append((sec, ""))
 
@@ -193,9 +196,9 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
 
 
 if __name__ == "__main__":
-    import sys
-
     def dummy(prog=None, msg=""):
         pass
 
-    chunk(sys.argv[1], from_page=0, to_page=10, callback=dummy)
+    pdf = "技术培训.pdf"
+    docx = "技术培训.docx"
+    chunk(docx, from_page=0, to_page=10, callback=dummy)

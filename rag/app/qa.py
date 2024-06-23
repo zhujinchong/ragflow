@@ -13,14 +13,14 @@
 import re
 from copy import deepcopy
 from io import BytesIO
-from nltk import word_tokenize
+
 from openpyxl import load_workbook
-from rag.nlp import is_english, random_choices, find_codec
+
+from rag.nlp import find_codec
 from rag.nlp import rag_tokenizer
-from deepdoc.parser import ExcelParser
 
 
-class Excel(ExcelParser):
+class ExcelParserForQA():
     def __call__(self, fnm, binary=None, callback=None):
         if not binary:
             wb = load_workbook(fnm)
@@ -50,20 +50,18 @@ class Excel(ExcelParser):
                 else:
                     fails.append(str(i + 1))
                 if len(res) % 999 == 0:
-                    callback(len(res) *
-                             0.6 /
-                             total, ("Extract Q&A: {}".format(len(res)) +
-                                     (f"{len(fails)} failure, line: %s..." %
-                                      (",".join(fails[:3])) if fails else "")))
+                    callback(len(res) * 0.6 / total,
+                             ("Extract Q&A: {}".format(len(res)) +
+                              (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
 
-        callback(0.6, ("Extract Q&A: {}. ".format(len(res)) + (
-            f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
-        self.is_english = is_english(
-            [rmPrefix(q) for q, _ in random_choices(res, k=30) if len(q) > 1])
+        callback(0.6,
+                 ("Extract Q&A: {}. ".format(len(res)) +
+                  (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
         return res
 
 
 def rmPrefix(txt):
+    """删除文档中的前缀"""
     return re.sub(
         r"^(问题|答案|回答|user|assistant|Q|A|Question|Answer|问|答)[\t:： ]+", "", txt.strip(), flags=re.IGNORECASE)
 
@@ -71,10 +69,9 @@ def rmPrefix(txt):
 def beAdoc(d, q, a, eng):
     qprefix = "Question: " if eng else "问题："
     aprefix = "Answer: " if eng else "回答："
-    d["content_with_weight"] = "\t".join(
-        [qprefix + rmPrefix(q), aprefix + rmPrefix(a)])
+    d["content_with_weight"] = "\t".join([qprefix + rmPrefix(q), aprefix + rmPrefix(a)])
     d["content_ltks"] = rag_tokenizer.tokenize(q)
-    d["content_sm_ltks"] = rag_tokenizer.fine_grained_tokenize(d["content_ltks"])
+    d["content_sm_ltks"] = rag_tokenizer.fine_grained_tokenize(q)
     return d
 
 
@@ -98,8 +95,7 @@ def chunk(filename, binary=None, lang="Chinese", callback=None, **kwargs):
     }
     if re.search(r"\.xlsx?$", filename, re.IGNORECASE):
         callback(0.1, "Start to parse.")
-        excel_parser = Excel()
-        for q, a in excel_parser(filename, binary, callback):
+        for q, a in ExcelParserForQA()(filename, binary, callback):
             res.append(beAdoc(deepcopy(doc), q, a, eng))
         return res
     elif re.search(r"\.(txt|csv)$", filename, re.IGNORECASE):
@@ -109,50 +105,47 @@ def chunk(filename, binary=None, lang="Chinese", callback=None, **kwargs):
             encoding = find_codec(binary)
             txt = binary.decode(encoding, errors="ignore")
         else:
-            with open(filename, "r") as f:
+            with open(filename, "r", encoding='utf-8') as f:
                 while True:
                     l = f.readline()
                     if not l:
                         break
                     txt += l
         lines = txt.split("\n")
-        comma, tab = 0, 0
-        for l in lines:
-            if len(l.split(",")) == 2: comma += 1
-            if len(l.split("\t")) == 2: tab += 1
-        delimiter = "\t" if tab >= comma else ","
+        delimiter = "\t"
 
         fails = []
-        question, answer = "", ""
         i = 0
         while i < len(lines):
             arr = lines[i].split(delimiter)
             if len(arr) != 2:
-                if question: answer += "\n" + lines[i]
-                else:
-                    fails.append(str(i+1))
+                fails.append(str(i + 1))
             elif len(arr) == 2:
-                if question and answer: res.append(beAdoc(deepcopy(doc), question, answer, eng))
                 question, answer = arr
+                if question and answer:
+                    res.append(beAdoc(deepcopy(doc), question, answer, eng))
             i += 1
             if len(res) % 999 == 0:
-                callback(len(res) * 0.6 / len(lines), ("Extract Q&A: {}".format(len(res)) + (
-                    f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
+                callback(len(res) * 0.6 / len(lines),
+                         ("Extract Q&A: {}".format(len(res)) +
+                          (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
 
-        if question: res.append(beAdoc(deepcopy(doc), question, answer, eng))
-
-        callback(0.6, ("Extract Q&A: {}".format(len(res)) + (
-            f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
+        callback(0.6,
+                 ("Extract Q&A: {}".format(len(res)) +
+                  (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
 
         return res
 
-    raise NotImplementedError(
-        "Excel and csv(txt) format files are supported.")
+    raise NotImplementedError("Excel and csv(txt) format files are supported.")
 
 
-if __name__ == "__main__":
-    import sys
-
-    def dummy(a, b):
-        pass
-    chunk(sys.argv[1], callback=dummy)
+# if __name__ == "__main__":
+#     def dummy(a, b):
+#         pass
+#
+#
+#     # doc = "新建XLSX 工作表.xlsx"
+#     doc = "新建文本文档.txt"
+#     c = chunk(doc, callback=dummy)
+#     for cc in c:
+#         print(cc)

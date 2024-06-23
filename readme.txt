@@ -4,18 +4,19 @@ docker pull nginx:1.24.0
 docker pull quay.io/minio/minio:RELEASE.2023-12-20T01-00-02Z
 docker pull mysql:5.7.18
 docker pull elasticsearch:8.11.4
-docker pull ollama/ollama:0.1.38
+docker pull ollama/ollama:0.1.42
 
 启动大模型、嵌入模型#####################################################################################
 # cpu
-docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama:0.1.38
+docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama:0.1.42
 # gpu
-docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama:0.1.38
+docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama:0.1.42
 docker exec -it ollama /bin/bash
-ollama pull qwen:0.5b-chat
+# 嵌入模型不需要启动
 ollama pull shaw/dmeta-embedding-zh-small
-# 只需要启动LLM，嵌入模型不需要启动
+# 只需要启动LLM
 ollama run qwen:0.5b-chat
+ollama run qnguyen3/nanollava
 
 启动数据库、前端#####################################################################################
 cd ./docker

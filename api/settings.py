@@ -53,7 +53,7 @@ ASR_MDL = "default-asr"
 IMAGE2TEXT_MDL = "default-vl"
 LLM_BASE_URL = ""
 API_KEY = ""
-PARSERS = "naive:General,qa:Q&A,manual:Manual,table:Table,paper:Paper,laws:Laws"
+PARSERS = "naive:General,qa:Q&A,paper:Paper,laws:Laws,picture:Picture"
 
 # MySQL
 DATABASE = get_base_config("mysql")
