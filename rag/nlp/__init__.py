@@ -116,7 +116,7 @@ def tokenize(d, t, eng):
     d["content_with_weight"] = t
     t = re.sub(r"</?(table|td|caption|tr|th)( [^<>]{0,12})?>", " ", t)
     d["content_ltks"] = rag_tokenizer.tokenize(t)
-    d["content_sm_ltks"] = rag_tokenizer.fine_grained_tokenize(d["content_ltks"])
+    d["content_sm_ltks"] = rag_tokenizer.fine_grained_tokenize(t)
 
 
 def tokenize_chunks(chunks, doc, eng, pdf_parser):
