@@ -51,10 +51,12 @@ def chunk(filename, binary, tenant_id, lang, callback=None, **kwargs):
         ans = cv_mdl.describe(binary)
         callback(0.8, "CV LLM respoond: %s ..." % ans[:32])
         txt += "\n" + ans
-        tokenize(doc, txt, eng)
-        return [doc]
     except Exception as e:
-        callback(prog=-1, msg=str(e))
+        callback(0.81, str(e))
+    finally:
+        tokenize(doc, txt, eng)
+        callback(0.82, "Finally result: %s ..." % txt[:32])
+        return [doc]
 
     return []
 
