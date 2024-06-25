@@ -17,6 +17,7 @@ from abc import ABC
 
 import openai
 from openai import OpenAI
+from rag.settings import Ollama
 
 
 class Base(ABC):
@@ -68,7 +69,9 @@ class Base(ABC):
 
 class DefaultChat(Base):
     def __init__(self):
-        super().__init__(key="EMPTY", model_name="qwen:0.5b-chat", base_url="http://localhost:11434/v1")
+        super().__init__(key=Ollama.get("chat_key", ""),
+                         model_name=Ollama.get("chat_model_name", ""),
+                         base_url=Ollama.get("chat_base_url", ""))
 
 
 # if __name__ == '__main__':

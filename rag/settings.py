@@ -23,6 +23,7 @@ from api.utils.log_utils import LoggerFactory, getLogger
 ES = get_base_config("es", {})
 MINIO = get_base_config("minio", {})
 REDIS = get_base_config("redis", {})
+Ollama = get_base_config("ollama", {})
 DOC_MAXIMUM_SIZE = 128 * 1024 * 1024
 
 

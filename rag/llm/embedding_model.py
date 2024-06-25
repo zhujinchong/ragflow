@@ -19,7 +19,7 @@ import numpy as np
 import requests
 
 from rag.utils import num_tokens_from_string, truncate
-
+from rag.settings import Ollama
 
 class Base(ABC):
     def __init__(self, key, model_name):
@@ -35,8 +35,8 @@ class Base(ABC):
 class DefaultEmbedding(Base):
 
     def __init__(self):
-        self.url = "http://localhost:11434/api/embeddings"
-        self.model_name = "shaw/dmeta-embedding-zh-small"
+        self.url = Ollama.get("embed_base_url", "")
+        self.model_name = Ollama.get("embed_model_name", "")
 
     def encode(self, texts: list, batch_size=32):
         texts = [truncate(t, 1024) for t in texts]

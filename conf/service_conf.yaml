@@ -22,6 +22,14 @@ redis:
   password: 'infini_rag_flow'
   db: 1
 
+ollama:
+  chat_key: "EMPTY"
+  chat_model_name: "qwen:0.5b-chat"
+  chat_base_url: "http://localhost:11434/v1"
+  embed_model_name: "shaw/dmeta-embedding-zh-small"
+  embed_base_url: "http://localhost:11434/api/embeddings"
+
+
 oauth:
   github:
     client_id: xxxxxxxxxxxxxxxxxxxxxxxxx
