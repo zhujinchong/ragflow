@@ -90,8 +90,8 @@ services:
     image: nginx:1.24.0
     container_name: ragflow-frontend
     environment:
-#      - SERVER_HOST=http://192.168.1.7:9380
-      - SERVER_HOST=http://192.168.50.200:9380
+      - SERVER_HOST=http://192.168.1.8:9380
+#      - SERVER_HOST=http://192.168.50.200:9380
       - TZ=Asia/Shanghai
     volumes:
       - ./init_data/dist:/ragflow/web/dist
@@ -102,6 +102,25 @@ services:
     command: [ "sh", "-c", "envsubst '$$SERVER_HOST' < /etc/nginx/conf.d/ragflow.conf.template > /etc/nginx/conf.d/ragflow.conf && nginx -g 'daemon off;'" ]
     ports:
       - 9381:80
+    networks:
+      - ragflow
+
+  frontend2:
+    image: nginx:1.24.0
+    container_name: ragflow-frontend2
+    environment:
+      - SERVER_HOST=http://192.168.1.8:9380
+      #      - SERVER_HOST=http://192.168.50.200:9380
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./init_data/dist1:/ragflow/web/dist
+      #      - ./nginx/ragflow.conf:/etc/nginx/conf.d/ragflow.conf
+      - ./init_data/nginx/ragflow.conf.template:/etc/nginx/conf.d/ragflow.conf.template
+      - ./init_data/nginx/proxy.conf:/etc/nginx/proxy.conf
+      - ./init_data/nginx/nginx.conf:/etc/nginx/nginx.conf
+    command: [ "sh", "-c", "envsubst '$$SERVER_HOST' < /etc/nginx/conf.d/ragflow.conf.template > /etc/nginx/conf.d/ragflow.conf && nginx -g 'daemon off;'" ]
+    ports:
+      - 9382:80
     networks:
       - ragflow
 
