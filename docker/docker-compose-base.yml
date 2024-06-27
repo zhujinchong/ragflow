@@ -9,10 +9,11 @@ services:
     environment:
       - node.name=es01
       - cluster.name=rag_flow
-      - cluster.initial_master_nodes=es01
+      - discovery.type=single-node
+#      - cluster.initial_master_nodes=es01
+#      - cluster.max_shards_per_node=4096
       - bootstrap.memory_lock=false
       - xpack.security.enabled=false
-      - cluster.max_shards_per_node=4096
       - TZ=Asia/Shanghai
     mem_limit: 8073741824
     ulimits:

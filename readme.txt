@@ -51,3 +51,8 @@ https://github.com/nltk/nltk_data
 解压后将packages文件夹重新命名为nltk_data放到下面任意目录
 import nltk
 nltk.find('.')
+
+Linux启动 python api/ragflow_server.py 提示找不到module #################################################################################################
+# 将项目加入系统路径
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
