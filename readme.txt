@@ -1,4 +1,5 @@
-下载镜像######################################################################################
+安装步骤######################################################################################
+下载镜像==========================
 docker pull redis:7.2.4
 docker pull nginx:1.24.0
 docker pull quay.io/minio/minio:RELEASE.2023-12-20T01-00-02Z
@@ -6,7 +7,7 @@ docker pull mysql:5.7.18
 docker pull elasticsearch:8.11.4
 docker pull ollama/ollama:0.1.42
 
-启动大模型、嵌入模型#####################################################################################
+启动大模型、嵌入模型==========================
 # cpu
 docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama:0.1.42
 # gpu
@@ -18,10 +19,29 @@ ollama pull shaw/dmeta-embedding-zh-small
 ollama run qwen:0.5b-chat
 ollama run qnguyen3/nanollava
 
-启动数据库、前端#####################################################################################
+启动数据库、前端==========================
 cd ./docker
 # 注意：前端需要改成本地ip
 docker-compose -f docker-compose-base.yml -p ragflow up -d
+
+启动后端==========================
+pip install requirement.txt
+python api/ragflow_server.py
+python rag/svr/task_executor.py
+
+
+遇到问题#################################################################################################
+NLTK离线包=======================================================
+https://github.com/nltk/nltk_data
+解压后将packages文件夹重新命名为nltk_data放到下面任意目录
+import nltk
+nltk.find('.')
+
+Linux启动 python api/ragflow_server.py 提示找不到module ============
+# 将项目加入系统路径
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 ES数据#################################################################################################
 d["doc_id"] =
@@ -46,13 +66,3 @@ d["top_int"] = [106]
 
 d["important_kwd"] = chunk中自定义关键字
 
-NLTK离线包#################################################################################################
-https://github.com/nltk/nltk_data
-解压后将packages文件夹重新命名为nltk_data放到下面任意目录
-import nltk
-nltk.find('.')
-
-Linux启动 python api/ragflow_server.py 提示找不到module #################################################################################################
-# 将项目加入系统路径
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
