@@ -42,6 +42,8 @@ Linux启动 python api/ragflow_server.py 提示找不到module ============
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+tiktoken离线安装=================================================
+https://blog.csdn.net/qq_35054222/article/details/137127660
 
 ES数据#################################################################################################
 d["doc_id"] =
